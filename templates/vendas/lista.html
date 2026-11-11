@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Vendas & Faturamento{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Topo: Título e Botão Nova Venda -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900">Vendas & Peças</h1>
+            <p class="text-sm text-slate-500 mt-0.5">Faturamento de peças, insumos e serviços</p>
+        </div>
+
+        <a href="{{ url_for('vendas_nova') }}" 
+           class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-xl shadow-sm shadow-blue-500/20 hover:shadow-md transition-all">
+            <i class="fa-solid fa-cart-plus text-xs"></i>
+            <span>Nova Venda</span>
+        </a>
+    </div>
+
+    <!-- Barra de Filtros e Busca -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+        <form method="GET" action="{{ url_for('vendas_lista') }}" class="flex flex-col sm:flex-row gap-3">
+            
+            <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </div>
+                <input type="text" name="q" value="{{ termo_busca }}" 
+                       placeholder="Buscar por número da venda ou nome do cliente..." 
+                       class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+            </div>
+
+            <div class="w-full sm:w-48">
+                <select name="status" 
+                        class="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                    <option value="">Todos os status</option>
+                    <option value="Pago" {% if status_filtro == 'Pago' %}selected{% endif %}>Pago</option>
+                    <option value="Pendente" {% if status_filtro == 'Pendente' %}selected{% endif %}>Pendente</option>
+                    <option value="Cancelado" {% if status_filtro == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button type="submit" 
+                        class="flex-1 sm:flex-none px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-xl shadow-sm transition-colors">
+                    Filtrar
+                </button>
+                {% if termo_busca or status_filtro %}
+                    <a href="{{ url_for('vendas_lista') }}" 
+                       class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-xl transition-colors" title="Limpar filtros">
+                        Limpar
+                    </a>
+                {% endif %}
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Lista de Vendas -->
+    {% if vendas %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for v in vendas %}
+                <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                    
+                    <div>
+                        <!-- Topo: Número e Status -->
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <a href="{{ url_for('vendas_detalhe', id=v.id) }}" class="font-bold text-base text-slate-900 hover:text-blue-600">
+                                {{ v.numero }}
+                            </a>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ v.status | status_venda_badge }}">
+                                {{ v.status }}
+                            </span>
+                        </div>
+
+                        <!-- Cliente e O.S. Vinculada -->
+                        <div class="py-3 space-y-1.5 text-xs">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-regular fa-user text-slate-400 w-4"></i>
+                                {% if v.cliente %}
+                                    <a href="{{ url_for('clientes_detalhe', id=v.cliente.id) }}" class="font-bold text-slate-800 hover:text-blue-600">
+                                        {{ v.cliente.nome }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-slate-500 font-medium">Consumidor Avulso</span>
+                                {% endif %}
+                            </div>
+
+                            {% if v.ordem_servico %}
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-clipboard-list text-blue-500 w-4"></i>
+                                    <a href="{{ url_for('os_detalhe', id=v.ordem_servico.id) }}" class="font-semibold text-blue-600 hover:underline">
+                                        Vinculada à {{ v.ordem_servico.numero }}
+                                    </a>
+                                </div>
+                            {% endif %}
+
+                            <div class="flex items-center gap-2 text-slate-400">
+                                <i class="fa-regular fa-calendar text-slate-400 w-4"></i>
+                                <span>{{ v.data | format_datetime }}</span>
+                            </div>
+
+                            <div class="flex items-center gap-2 text-slate-500">
+                                <i class="fa-regular fa-credit-card text-slate-400 w-4"></i>
+                                <span>{{ v.forma_pagamento or 'Não especificado' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Resumo de Itens -->
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-500">
+                            <span class="font-semibold text-slate-700 block mb-1">
+                                {{ v.itens|length }} item(ns) faturado(s):
+                            </span>
+                            <ul class="space-y-0.5">
+                                {% for it in v.itens[:2] %}
+                                    <li class="truncate">• {{ it.descricao }} ({{ it.quantidade }}x)</li>
+                                {% endfor %}
+                                {% if v.itens|length > 2 %}
+                                    <li class="text-slate-400 italic">+ mais {{ v.itens|length - 2 }} item(ns)...</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Rodapé com Total e Ações -->
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <div>
+                            <span class="block text-[11px] text-slate-400 uppercase font-bold">Valor Total</span>
+                            <span class="text-lg font-bold text-emerald-600">{{ v.valor_total | currency }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="{{ url_for('vendas_detalhe', id=v.id) }}" 
+                               class="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors">
+                                Ver Detalhes
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-sm">
+            <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-receipt text-2xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">Nenhuma venda encontrada</h3>
+            <p class="text-sm text-slate-500 max-w-sm mx-auto mt-1">
+                {% if termo_busca or status_filtro %}
+                    Nenhuma venda coincide com os filtros aplicados.
+                {% else %}
+                    Nenhuma venda ou peça foi lançada no sistema ainda.
+                {% endif %}
+            </p>
+            <div class="mt-6 flex items-center justify-center gap-3">
+                {% if termo_busca or status_filtro %}
+                    <a href="{{ url_for('vendas_lista') }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium">
+                        Limpar Filtros
+                    </a>
+                {% endif %}
+                <a href="{{ url_for('vendas_nova') }}" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm">
+                    Registrar Nova Venda
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

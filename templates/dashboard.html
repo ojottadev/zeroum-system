@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Topo do Dashboard: Título e Ações Rápidas -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900">Visão Geral</h1>
+            <p class="text-sm text-slate-500 mt-0.5">Acompanhamento em tempo real da assistência técnica</p>
+        </div>
+
+        <!-- Botões de Ação Rápida -->
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ url_for('os_nova') }}" 
+               class="inline-flex items-center gap-2 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-xl shadow-sm shadow-blue-500/20 hover:shadow-md transition-all">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Nova O.S.</span>
+            </a>
+            <a href="{{ url_for('clientes_novo') }}" 
+               class="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition-all">
+                <i class="fa-solid fa-user-plus text-xs text-slate-500"></i>
+                <span>Novo Cliente</span>
+            </a>
+            <a href="{{ url_for('vendas_nova') }}" 
+               class="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-sm font-semibold rounded-xl shadow-sm transition-all">
+                <i class="fa-solid fa-cart-plus text-xs text-slate-500"></i>
+                <span>Nova Venda</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Cards de Indicadores (KPIs) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Card 1: O.S. Abertas -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">O.S. em Aberto</span>
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <i class="fa-solid fa-screwdriver-wrench text-lg"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-3xl font-bold tracking-tight text-slate-900">{{ qtd_os_abertas }}</span>
+                <span class="text-xs text-slate-500">em andamento</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Aberto, Diagnóstico, Peça ou Reparo</p>
+        </div>
+
+        <!-- Card 2: O.S. Prontas -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">O.S. Prontas</span>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <i class="fa-solid fa-circle-check text-lg"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-3xl font-bold tracking-tight text-slate-900">{{ qtd_os_prontas }}</span>
+                <span class="text-xs text-emerald-600 font-medium">aguardando retirada</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Prontas para entrega ao cliente</p>
+        </div>
+
+        <!-- Card 3: Faturamento do Mês -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Faturamento Mês</span>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <i class="fa-solid fa-hand-holding-dollar text-lg"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-2xl sm:text-3xl font-bold tracking-tight text-emerald-700">{{ faturamento_mes | currency }}</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Vendas pagas em {{ mes_atual_nome }}</p>
+        </div>
+
+        <!-- Card 4: Clientes Novos -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Novos Clientes</span>
+                <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <i class="fa-solid fa-user-plus text-lg"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-baseline gap-2">
+                <span class="text-3xl font-bold tracking-tight text-slate-900">{{ qtd_clientes_novos }}</span>
+                <span class="text-xs text-slate-500">neste mês</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Cadastrados no mês atual</p>
+        </div>
+
+    </div>
+
+    <!-- Seção de Listas Recentes (Grid 2 Colunas no Desktop) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Bloco 1: 8 O.S. Mais Recentes (8 colunas) -->
+        <div class="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-list text-blue-600"></i>
+                        Ordens de Serviço Recentes
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Últimas 8 ordens cadastradas no sistema</p>
+                </div>
+                <a href="{{ url_for('os_lista') }}" class="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">
+                    Ver todas <i class="fa-solid fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            {% if os_recentes %}
+                <div class="divide-y divide-slate-100">
+                    {% for o in os_recentes %}
+                        <div class="p-4 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div class="flex items-start gap-3 min-w-0">
+                                <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0 mt-0.5">
+                                    <i class="fa-solid fa-laptop text-sm"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <a href="{{ url_for('os_detalhe', id=o.id) }}" class="font-bold text-slate-900 hover:text-blue-600 text-sm tracking-tight">
+                                            {{ o.numero }}
+                                        </a>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border {{ o.status | status_os_badge }}">
+                                            {{ o.status }}
+                                        </span>
+                                    </div>
+                                    <p class="text-sm text-slate-700 font-medium truncate mt-0.5">
+                                        {{ o.cliente.nome }}
+                                    </p>
+                                    <p class="text-xs text-slate-500 truncate">
+                                        {{ o.tipo_equipamento or 'Equipamento' }}: {{ o.marca }} {{ o.modelo }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 shrink-0">
+                                <span class="text-xs text-slate-400">
+                                    <i class="fa-regular fa-calendar mr-1"></i> {{ o.data_abertura | format_date }}
+                                </span>
+                                <span class="text-sm font-bold text-slate-800 sm:mt-1">
+                                    {{ o.valor_total | currency }}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-8 text-center text-slate-400">
+                    <i class="fa-solid fa-inbox text-4xl mb-3 text-slate-300"></i>
+                    <p class="text-sm">Nenhuma ordem de serviço cadastrada ainda.</p>
+                    <a href="{{ url_for('os_nova') }}" class="inline-block mt-3 text-xs font-semibold text-blue-600 hover:underline">
+                        Abrir a primeira O.S.
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Bloco 2: 5 Vendas Mais Recentes (4/5 colunas) -->
+        <div class="lg:col-span-5 xl:col-span-4 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-receipt text-emerald-600"></i>
+                        Vendas Recentes
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Últimas 5 movimentações</p>
+                </div>
+                <a href="{{ url_for('vendas_lista') }}" class="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">
+                    Ver todas <i class="fa-solid fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            {% if vendas_recentes %}
+                <div class="divide-y divide-slate-100">
+                    {% for v in vendas_recentes %}
+                        <div class="p-4 hover:bg-slate-50/80 transition-colors">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <a href="{{ url_for('vendas_detalhe', id=v.id) }}" class="font-bold text-slate-900 hover:text-blue-600 text-sm">
+                                    {{ v.numero }}
+                                </a>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border {{ v.status | status_venda_badge }}">
+                                    {{ v.status }}
+                                </span>
+                            </div>
+                            
+                            <p class="text-xs text-slate-600 font-medium truncate">
+                                {% if v.cliente %}
+                                    <i class="fa-regular fa-user mr-1 text-slate-400"></i> {{ v.cliente.nome }}
+                                {% else %}
+                                    <i class="fa-solid fa-store mr-1 text-slate-400"></i> Consumidor Avulso
+                                {% endif %}
+                            </p>
+
+                            <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-50">
+                                <span class="text-xs text-slate-400">
+                                    {{ v.forma_pagamento or 'Não def.' }}
+                                </span>
+                                <span class="text-sm font-bold text-emerald-600">
+                                    {{ v.valor_total | currency }}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-8 text-center text-slate-400">
+                    <i class="fa-solid fa-receipt text-4xl mb-3 text-slate-300"></i>
+                    <p class="text-sm">Nenhuma venda registrada até o momento.</p>
+                    <a href="{{ url_for('vendas_nova') }}" class="inline-block mt-3 text-xs font-semibold text-blue-600 hover:underline">
+                        Registrar nova venda
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

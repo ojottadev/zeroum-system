@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Ordens de Serviço{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Topo: Título e Botão Nova O.S. -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900">Ordens de Serviço</h1>
+            <p class="text-sm text-slate-500 mt-0.5">Controle de reparos, diagnósticos e manutenções</p>
+        </div>
+
+        <a href="{{ url_for('os_nova') }}" 
+           class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-xl shadow-sm shadow-blue-500/20 hover:shadow-md transition-all">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Nova O.S.</span>
+        </a>
+    </div>
+
+    <!-- Barra de Filtros e Pesquisa -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+        <form method="GET" action="{{ url_for('os_lista') }}" class="flex flex-col md:flex-row gap-3">
+            
+            <!-- Campo de Busca -->
+            <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </div>
+                <input type="text" name="q" value="{{ termo_busca }}" 
+                       placeholder="Buscar por nº da O.S., cliente, marca ou modelo..." 
+                       class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+            </div>
+
+            <!-- Filtro por Status (Select) -->
+            <div class="w-full md:w-56">
+                <select name="status" 
+                        class="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                    <option value="">Todos os status</option>
+                    {% for st in status_lista %}
+                        <option value="{{ st }}" {% if status_selecionado == st %}selected{% endif %}>
+                            {{ st }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Botões de Ação do Filtro -->
+            <div class="flex items-center gap-2">
+                <button type="submit" 
+                        class="flex-1 md:flex-none px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-xl shadow-sm transition-colors">
+                    Filtrar
+                </button>
+                {% if termo_busca or status_selecionado %}
+                    <a href="{{ url_for('os_lista') }}" 
+                       class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-xl transition-colors" title="Limpar filtros">
+                        Limpar
+                    </a>
+                {% endif %}
+            </div>
+
+        </form>
+
+        <!-- Pílulas rápidas de status para toque no celular -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 text-xs no-scrollbar">
+            <a href="{{ url_for('os_lista', q=termo_busca) }}" 
+               class="px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors {% if not status_selecionado %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                Todas ({{ ordens|length if not status_selecionado else '' }})
+            </a>
+            {% for st in status_lista %}
+                <a href="{{ url_for('os_lista', status=st, q=termo_busca) }}" 
+                   class="px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors {% if status_selecionado == st %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                    {{ st }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Listagem de O.S. (Mobile-First Cards) -->
+    {% if ordens %}
+        <div class="space-y-3">
+            {% for o in ordens %}
+                <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
+                    
+                    <!-- Cabeçalho do Card: Número, Status e Data -->
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <a href="{{ url_for('os_detalhe', id=o.id) }}" class="font-bold text-base text-slate-900 hover:text-blue-600 tracking-tight">
+                                {{ o.numero }}
+                            </a>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ o.status | status_os_badge }}">
+                                {{ o.status }}
+                            </span>
+                        </div>
+                        <div class="text-xs text-slate-400 flex items-center gap-3">
+                            <span><i class="fa-regular fa-calendar mr-1"></i> Abertura: {{ o.data_abertura | format_date }}</span>
+                            {% if o.data_previsao %}
+                                <span><i class="fa-regular fa-clock mr-1"></i> Previsão: {{ o.data_previsao | format_date }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Conteúdo Principal do Card -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 py-3 items-center">
+                        
+                        <!-- Dados do Cliente e Equipamento (7 colunas) -->
+                        <div class="md:col-span-7 space-y-1">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-regular fa-user text-slate-400 text-xs"></i>
+                                <a href="{{ url_for('clientes_detalhe', id=o.cliente.id) }}" class="text-sm font-bold text-slate-800 hover:text-blue-600">
+                                    {{ o.cliente.nome }}
+                                </a>
+                                {% if o.cliente.telefone %}
+                                    <span class="text-xs text-slate-400">({{ o.cliente.telefone }})</span>
+                                {% endif %}
+                            </div>
+
+                            <p class="text-sm text-slate-700 font-medium">
+                                <i class="fa-solid fa-laptop text-blue-500 mr-1.5 text-xs"></i>
+                                <span class="text-slate-500 font-normal">{{ o.tipo_equipamento or 'Aparelho' }}:</span> 
+                                {{ o.marca }} {{ o.modelo }}
+                                {% if o.numero_serie %}
+                                    <span class="text-xs text-slate-400 font-normal ml-1">(S/N: {{ o.numero_serie }})</span>
+                                {% endif %}
+                            </p>
+
+                            {% if o.problema %}
+                                <p class="text-xs text-slate-500 line-clamp-1 italic">
+                                    <span class="font-semibold not-italic text-slate-600">Problema:</span> {{ o.problema }}
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Valores Financeiros (3 colunas) -->
+                        <div class="md:col-span-3 bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs space-y-1">
+                            <div class="flex justify-between text-slate-500">
+                                <span>Mão de Obra:</span>
+                                <span class="font-medium text-slate-700">{{ o.valor_mao_obra | currency }}</span>
+                            </div>
+                            <div class="flex justify-between text-slate-500">
+                                <span>Peças:</span>
+                                <span class="font-medium text-slate-700">{{ o.valor_pecas | currency }}</span>
+                            </div>
+                            <div class="flex justify-between font-bold text-slate-900 border-t border-slate-200/80 pt-1 text-sm">
+                                <span>Total:</span>
+                                <span class="text-blue-600">{{ o.valor_total | currency }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Ações Rápidas (2 colunas) -->
+                        <div class="md:col-span-2 flex flex-row md:flex-col items-center justify-end gap-2 pt-2 md:pt-0">
+                            <a href="{{ url_for('os_detalhe', id=o.id) }}" 
+                               class="w-full text-center px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors">
+                                Ver Detalhes
+                            </a>
+                            <a href="{{ url_for('os_editar', id=o.id) }}" 
+                               class="w-full text-center px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">
+                                Editar
+                            </a>
+                        </div>
+
+                    </div>
+
+                    <!-- Rodapé com Mudança Rápida de Status -->
+                    <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                        <div class="text-slate-400">
+                            {% if o.tecnico %}
+                                <span><i class="fa-solid fa-wrench text-slate-400 mr-1"></i> Técnico: <strong class="text-slate-600">{{ o.tecnico }}</strong></span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Formulário de Atualização Rápida de Status -->
+                        <form method="POST" action="{{ url_for('os_status_rapido', id=o.id) }}" class="flex items-center gap-2">
+                            <span class="text-slate-500 font-medium">Alterar Status:</span>
+                            <select name="status" onchange="this.form.submit()" 
+                                    class="text-xs bg-slate-50 border border-slate-200 rounded-lg py-1 px-2.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                {% for st in status_lista %}
+                                    <option value="{{ st }}" {% if o.status == st %}selected{% endif %}>{{ st }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-sm">
+            <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-clipboard-question text-2xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">Nenhuma Ordem de Serviço encontrada</h3>
+            <p class="text-sm text-slate-500 max-w-sm mx-auto mt-1">
+                {% if termo_busca or status_selecionado %}
+                    Nenhuma O.S. coincide com os filtros aplicados.
+                {% else %}
+                    Nenhuma ordem de serviço foi registrada ainda.
+                {% endif %}
+            </p>
+            <div class="mt-6 flex items-center justify-center gap-3">
+                {% if termo_busca or status_selecionado %}
+                    <a href="{{ url_for('os_lista') }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium">
+                        Limpar Filtros
+                    </a>
+                {% endif %}
+                <a href="{{ url_for('os_nova') }}" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm">
+                    Abrir Nova O.S.
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

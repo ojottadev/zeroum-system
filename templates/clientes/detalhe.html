@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Cliente: {{ cliente.nome }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Topo / Breadcrumb e Ações -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
+                <a href="{{ url_for('clientes_lista') }}" class="hover:text-blue-600 transition-colors">Clientes</a>
+                <span>/</span>
+                <span class="text-slate-700">Detalhes do Cliente</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ cliente.nome }}</h1>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ url_for('os_nova', cliente_id=cliente.id) }}" 
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all">
+                <i class="fa-solid fa-plus"></i> Nova O.S.
+            </a>
+            <a href="{{ url_for('vendas_nova', cliente_id=cliente.id) }}" 
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all">
+                <i class="fa-solid fa-cart-plus"></i> Nova Venda
+            </a>
+            <a href="{{ url_for('clientes_editar', id=cliente.id) }}" 
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors">
+                <i class="fa-solid fa-pen-to-square"></i> Editar
+            </a>
+            
+            <!-- Botão de Excluir -->
+            <form method="POST" action="{{ url_for('clientes_excluir', id=cliente.id) }}" 
+                  onsubmit="return confirm('Tem certeza que deseja excluir este cliente? Se houver O.S. ou Vendas vinculadas, a exclusão será bloqueada.')" 
+                  class="inline-block">
+                <button type="submit" 
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-xl transition-colors">
+                    <i class="fa-regular fa-trash-can"></i> Excluir
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Informações do Cliente -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-id-card-clip text-blue-500"></i> Informações Cadastrais
+        </h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+                <span class="block text-xs text-slate-400 font-medium">CPF / CNPJ</span>
+                <span class="text-sm font-semibold text-slate-800 mt-0.5 block">
+                    {{ cliente.cpf_cnpj or 'Não informado' }}
+                </span>
+            </div>
+
+            <div>
+                <span class="block text-xs text-slate-400 font-medium">Telefone / WhatsApp</span>
+                {% if cliente.telefone %}
+                    <a href="tel:{{ cliente.telefone }}" class="text-sm font-semibold text-blue-600 hover:underline mt-0.5 inline-flex items-center gap-1.5">
+                        <i class="fa-solid fa-phone text-xs"></i> {{ cliente.telefone }}
+                    </a>
+                {% else %}
+                    <span class="text-sm text-slate-500 mt-0.5 block">Não informado</span>
+                {% endif %}
+            </div>
+
+            <div>
+                <span class="block text-xs text-slate-400 font-medium">E-mail</span>
+                {% if cliente.email %}
+                    <a href="mailto:{{ cliente.email }}" class="text-sm font-semibold text-blue-600 hover:underline mt-0.5 inline-flex items-center gap-1.5 truncate max-w-full">
+                        <i class="fa-regular fa-envelope text-xs"></i> {{ cliente.email }}
+                    </a>
+                {% else %}
+                    <span class="text-sm text-slate-500 mt-0.5 block">Não informado</span>
+                {% endif %}
+            </div>
+
+            <div>
+                <span class="block text-xs text-slate-400 font-medium">Cliente desde</span>
+                <span class="text-sm font-semibold text-slate-800 mt-0.5 block">
+                    {{ cliente.criado_em | format_date }}
+                </span>
+            </div>
+        </div>
+
+        {% if cliente.endereco %}
+            <div class="mt-4 pt-4 border-t border-slate-100">
+                <span class="block text-xs text-slate-400 font-medium">Endereço</span>
+                <span class="text-sm text-slate-700 mt-0.5 block">
+                    <i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>{{ cliente.endereco }}
+                </span>
+            </div>
+        {% endif %}
+
+        {% if cliente.observacoes %}
+            <div class="mt-4 pt-4 border-t border-slate-100">
+                <span class="block text-xs text-slate-400 font-medium">Observações</span>
+                <p class="text-sm text-slate-600 mt-0.5 whitespace-pre-line bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    {{ cliente.observacoes }}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Grid: Histórico de O.S. e Vendas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+        <!-- 1. Histórico de Ordens de Serviço -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-list text-blue-600"></i>
+                        Ordens de Serviço ({{ cliente.ordens_servico|length }})
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Histórico completo de equipamentos</p>
+                </div>
+                <a href="{{ url_for('os_nova', cliente_id=cliente.id) }}" class="text-xs font-semibold text-blue-600 hover:underline">
+                    + Nova O.S.
+                </a>
+            </div>
+
+            {% if cliente.ordens_servico %}
+                <div class="divide-y divide-slate-100">
+                    {% for o in cliente.ordens_servico %}
+                        <div class="p-4 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <a href="{{ url_for('os_detalhe', id=o.id) }}" class="font-bold text-sm text-slate-900 hover:text-blue-600">
+                                        {{ o.numero }}
+                                    </a>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border {{ o.status | status_os_badge }}">
+                                        {{ o.status }}
+                                    </span>
+                                </div>
+                                <p class="text-xs font-medium text-slate-700 mt-1">
+                                    {{ o.tipo_equipamento or 'Equipamento' }}: {{ o.marca }} {{ o.modelo }}
+                                </p>
+                                <p class="text-xs text-slate-400 mt-0.5">
+                                    <i class="fa-regular fa-calendar mr-1"></i> Abertura: {{ o.data_abertura | format_date }}
+                                </p>
+                            </div>
+                            <div class="flex items-center justify-between sm:flex-col sm:items-end gap-1">
+                                <span class="text-sm font-bold text-slate-800">
+                                    {{ o.valor_total | currency }}
+                                </span>
+                                <a href="{{ url_for('os_detalhe', id=o.id) }}" class="text-xs text-blue-600 font-semibold hover:underline">
+                                    Ver Detalhes →
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-8 text-center text-slate-400">
+                    <i class="fa-solid fa-laptop-medical text-3xl mb-2 text-slate-300"></i>
+                    <p class="text-xs">Nenhuma O.S. cadastrada para este cliente.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 2. Histórico de Vendas -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-receipt text-emerald-600"></i>
+                        Vendas e Faturamento ({{ cliente.vendas|length }})
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Histórico de peças e serviços faturados</p>
+                </div>
+                <a href="{{ url_for('vendas_nova', cliente_id=cliente.id) }}" class="text-xs font-semibold text-emerald-600 hover:underline">
+                    + Nova Venda
+                </a>
+            </div>
+
+            {% if cliente.vendas %}
+                <div class="divide-y divide-slate-100">
+                    {% for v in cliente.vendas %}
+                        <div class="p-4 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <a href="{{ url_for('vendas_detalhe', id=v.id) }}" class="font-bold text-sm text-slate-900 hover:text-blue-600">
+                                        {{ v.numero }}
+                                    </a>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border {{ v.status | status_venda_badge }}">
+                                        {{ v.status }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">
+                                    <i class="fa-regular fa-calendar mr-1"></i> {{ v.data | format_datetime }}
+                                </p>
+                                {% if v.ordem_servico %}
+                                    <span class="inline-block text-xs text-blue-600 mt-0.5">
+                                        Vinculada à {{ v.ordem_servico.numero }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center justify-between sm:flex-col sm:items-end gap-1">
+                                <span class="text-sm font-bold text-emerald-600">
+                                    {{ v.valor_total | currency }}
+                                </span>
+                                <a href="{{ url_for('vendas_detalhe', id=v.id) }}" class="text-xs text-blue-600 font-semibold hover:underline">
+                                    Ver Venda →
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-8 text-center text-slate-400">
+                    <i class="fa-solid fa-receipt text-3xl mb-2 text-slate-300"></i>
+                    <p class="text-xs">Nenhuma venda registrada para este cliente.</p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}O.S. {{ os_obj.numero }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Topo / Breadcrumb e Ações -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
+                <a href="{{ url_for('os_lista') }}" class="hover:text-blue-600 transition-colors">Ordens de Serviço</a>
+                <span>/</span>
+                <span class="text-slate-700">{{ os_obj.numero }}</span>
+            </div>
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ os_obj.numero }}</h1>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border {{ os_obj.status | status_os_badge }}">
+                    {{ os_obj.status }}
+                </span>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ url_for('vendas_nova', os_id=os_obj.id, cliente_id=os_obj.cliente_id) }}" 
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all">
+                <i class="fa-solid fa-cart-plus"></i> Lançar Peça / Venda
+            </a>
+            <a href="{{ url_for('os_editar', id=os_obj.id) }}" 
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all">
+                <i class="fa-solid fa-pen-to-square"></i> Editar O.S.
+            </a>
+            <a href="{{ url_for('os_lista') }}" 
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors">
+                Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Barra Rápida de Atualização de Status -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-arrows-rotate text-blue-600"></i>
+            <span class="text-sm font-bold text-slate-800">Alteração Rápida de Status:</span>
+        </div>
+        <form method="POST" action="{{ url_for('os_status_rapido', id=os_obj.id) }}" class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <select name="status" 
+                    class="text-sm bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% for st in status_lista %}
+                    <option value="{{ st }}" {% if os_obj.status == st %}selected{% endif %}>
+                        {{ st }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button type="submit" 
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors whitespace-nowrap">
+                Atualizar Status
+            </button>
+        </form>
+    </div>
+
+    <!-- Grid de Informações: 2 Colunas -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Coluna Principal (8 colunas): Aparelho, Problema, Diagnóstico -->
+        <div class="lg:col-span-8 space-y-6">
+
+            <!-- Card: Dados do Aparelho -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-laptop text-blue-500"></i> Dados do Equipamento
+                </h2>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div>
+                        <span class="block text-xs text-slate-400 font-medium">Equipamento</span>
+                        <span class="text-sm font-bold text-slate-800 mt-0.5 block">
+                            {{ os_obj.tipo_equipamento or 'Não especificado' }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-xs text-slate-400 font-medium">Marca / Fabricante</span>
+                        <span class="text-sm font-semibold text-slate-800 mt-0.5 block">
+                            {{ os_obj.marca or '—' }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-xs text-slate-400 font-medium">Modelo</span>
+                        <span class="text-sm font-semibold text-slate-800 mt-0.5 block">
+                            {{ os_obj.modelo or '—' }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-xs text-slate-400 font-medium">Nº de Série / IMEI</span>
+                        <span class="text-sm font-mono text-slate-800 mt-0.5 block">
+                            {{ os_obj.numero_serie or '—' }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-xs text-slate-400 font-medium">Senha / Padrão</span>
+                        <span class="text-sm font-mono text-slate-800 mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded-md">
+                            <i class="fa-solid fa-key text-xs text-slate-400"></i> {{ os_obj.senha_equipamento or 'Sem senha' }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-xs text-slate-400 font-medium">Técnico Encarregado</span>
+                        <span class="text-sm font-semibold text-slate-800 mt-0.5 block">
+                            {{ os_obj.tecnico or 'Não atribuído' }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if os_obj.observacoes %}
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <span class="block text-xs text-slate-400 font-medium">Condições de Entrada / Observações</span>
+                        <p class="text-xs text-slate-600 mt-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            {{ os_obj.observacoes }}
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Card: Reclamação do Cliente & Diagnóstico -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-rose-500 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Reclamação do Cliente / Defeito
+                    </h2>
+                    <div class="bg-rose-50/50 border border-rose-100 rounded-xl p-4 text-sm text-slate-700 whitespace-pre-line leading-relaxed">
+                        {{ os_obj.problema or 'Nenhum relato detalhado registrado.' }}
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-blue-600 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-stethoscope"></i> Parecer / Diagnóstico Técnico
+                    </h2>
+                    <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4 text-sm text-slate-700 whitespace-pre-line leading-relaxed">
+                        {{ os_obj.diagnostico or 'Diagnóstico técnico pendente ou ainda não preenchido.' }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card: Vendas e Peças Vinculadas -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-receipt text-emerald-600"></i>
+                            Vendas & Peças Vinculadas ({{ os_obj.vendas|length }})
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Peças e serviços faturados para esta ordem de serviço</p>
+                    </div>
+                    <a href="{{ url_for('vendas_nova', os_id=os_obj.id, cliente_id=os_obj.cliente_id) }}" 
+                       class="text-xs font-semibold text-emerald-600 hover:underline">
+                        + Nova Venda
+                    </a>
+                </div>
+
+                {% if os_obj.vendas %}
+                    <div class="divide-y divide-slate-100">
+                        {% for v in os_obj.vendas %}
+                            <div class="p-4 hover:bg-slate-50 transition-colors">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <a href="{{ url_for('vendas_detalhe', id=v.id) }}" class="font-bold text-sm text-slate-900 hover:text-blue-600">
+                                            {{ v.numero }}
+                                        </a>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border {{ v.status | status_venda_badge }}">
+                                            {{ v.status }}
+                                        </span>
+                                    </div>
+                                    <span class="text-sm font-bold text-emerald-600">
+                                        {{ v.valor_total | currency }}
+                                    </span>
+                                </div>
+
+                                <!-- Itens desta venda -->
+                                <div class="text-xs text-slate-500 space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                    {% for item in v.itens %}
+                                        <div class="flex justify-between items-center">
+                                            <span>• {{ item.descricao }} ({{ item.quantidade }}x {{ item.valor_unitario | currency }})</span>
+                                            <span class="font-medium text-slate-700">{{ item.subtotal | currency }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="p-6 text-center text-slate-400">
+                        <i class="fa-solid fa-box-open text-2xl mb-2 text-slate-300"></i>
+                        <p class="text-xs">Nenhuma venda ou peça vinculada a esta O.S. ainda.</p>
+                        <a href="{{ url_for('vendas_nova', os_id=os_obj.id, cliente_id=os_obj.cliente_id) }}" class="inline-block mt-2 text-xs font-semibold text-emerald-600 hover:underline">
+                            Lançar peças utilizadas
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- Coluna Lateral (4 colunas): Cliente, Linha do Tempo e Resumo Financeiro -->
+        <div class="lg:col-span-4 space-y-6">
+
+            <!-- Card: Cliente -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Cliente</span>
+                    <a href="{{ url_for('clientes_detalhe', id=os_obj.cliente.id) }}" class="text-xs text-blue-600 font-semibold hover:underline">
+                        Ver Perfil →
+                    </a>
+                </div>
+                <h3 class="font-bold text-base text-slate-900">{{ os_obj.cliente.nome }}</h3>
+                <div class="mt-3 space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-3">
+                    {% if os_obj.cliente.telefone %}
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-phone text-slate-400 w-4"></i>
+                            <a href="tel:{{ os_obj.cliente.telefone }}" class="hover:text-blue-600 font-semibold">
+                                {{ os_obj.cliente.telefone }}
+                            </a>
+                        </div>
+                    {% endif %}
+                    {% if os_obj.cliente.email %}
+                        <div class="flex items-center gap-2 truncate">
+                            <i class="fa-regular fa-envelope text-slate-400 w-4"></i>
+                            <a href="mailto:{{ os_obj.cliente.email }}" class="hover:text-blue-600 truncate">
+                                {{ os_obj.cliente.email }}
+                            </a>
+                        </div>
+                    {% endif %}
+                    {% if os_obj.cliente.endereco %}
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-location-dot text-slate-400 w-4"></i>
+                            <span>{{ os_obj.cliente.endereco }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Card: Resumo Financeiro -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">
+                    Resumo Financeiro da O.S.
+                </span>
+
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between text-slate-600">
+                        <span>Mão de Obra:</span>
+                        <span class="font-semibold text-slate-800">{{ os_obj.valor_mao_obra | currency }}</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Peças e Insumos:</span>
+                        <span class="font-semibold text-slate-800">{{ os_obj.valor_pecas | currency }}</span>
+                    </div>
+                    <div class="pt-3 border-t border-slate-200 flex justify-between items-baseline">
+                        <span class="font-bold text-slate-900">Total da O.S.:</span>
+                        <span class="text-xl font-bold text-blue-600">{{ os_obj.valor_total | currency }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card: Linha do Tempo e Datas -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-4">
+                    Datas e Linha do Tempo
+                </span>
+
+                <div class="space-y-3.5 text-xs">
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                            <i class="fa-regular fa-calendar-plus text-xs"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-slate-800 block">Abertura</span>
+                            <span class="text-slate-500">{{ os_obj.data_abertura | format_datetime }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+                            <i class="fa-regular fa-clock text-xs"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-slate-800 block">Previsão</span>
+                            <span class="text-slate-500">{{ os_obj.data_previsao | format_date }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-6 h-6 rounded-full {% if os_obj.data_conclusao %}bg-emerald-100 text-emerald-600{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center shrink-0 mt-0.5">
+                            <i class="fa-solid fa-check text-xs"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-slate-800 block">Conclusão (Pronto)</span>
+                            <span class="text-slate-500">{{ os_obj.data_conclusao | format_datetime }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-6 h-6 rounded-full {% if os_obj.data_entrega %}bg-slate-200 text-slate-700{% else %}bg-slate-100 text-slate-400{% endif %} flex items-center justify-center shrink-0 mt-0.5">
+                            <i class="fa-solid fa-handshake text-xs"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-slate-800 block">Entrega ao Cliente</span>
+                            <span class="text-slate-500">{{ os_obj.data_entrega | format_datetime }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+# Ambientes virtuais
+venv/
+env/
+.env
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Banco de dados de testes temporários
+/tmp/zeroum_test_app.db
+test_*.db
+
+# Logs e arquivos compactados
+*.log
+*.zip
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo

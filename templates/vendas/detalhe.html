@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Venda {{ venda.numero }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Topo / Breadcrumb e Ações -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
+                <a href="{{ url_for('vendas_lista') }}" class="hover:text-blue-600 transition-colors">Vendas</a>
+                <span>/</span>
+                <span class="text-slate-700">{{ venda.numero }}</span>
+            </div>
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ venda.numero }}</h1>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border {{ venda.status | status_venda_badge }}">
+                    {{ venda.status }}
+                </span>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- Botão de Excluir Venda -->
+            <form method="POST" action="{{ url_for('vendas_excluir', id=venda.id) }}" 
+                  onsubmit="return confirm('Deseja realmente excluir esta venda? Se estiver vinculada a uma O.S., o valor de peças da O.S. será estornado automaticamente.')" 
+                  class="inline-block">
+                <button type="submit" 
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-xl transition-colors">
+                    <i class="fa-regular fa-trash-can"></i> Excluir Venda
+                </button>
+            </form>
+            <a href="{{ url_for('vendas_lista') }}" 
+               class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors">
+                Voltar à Lista
+            </a>
+        </div>
+    </div>
+
+    <!-- Dados Gerais da Venda -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-receipt text-blue-500"></i> Informações do Faturamento
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- Cliente -->
+            <div>
+                <span class="block text-xs text-slate-400 font-medium">Cliente</span>
+                {% if venda.cliente %}
+                    <a href="{{ url_for('clientes_detalhe', id=venda.cliente.id) }}" class="text-sm font-bold text-blue-600 hover:underline mt-0.5 block">
+                        {{ venda.cliente.nome }}
+                    </a>
+                {% else %}
+                    <span class="text-sm font-semibold text-slate-700 mt-0.5 block">Consumidor Avulso</span>
+                {% endif %}
+            </div>
+
+            <!-- O.S. Vinculada -->
+            <div>
+                <span class="block text-xs text-slate-400 font-medium">Ordem de Serviço</span>
+                {% if venda.ordem_servico %}
+                    <a href="{{ url_for('os_detalhe', id=venda.ordem_servico.id) }}" class="text-sm font-bold text-blue-600 hover:underline mt-0.5 inline-flex items-center gap-1.5">
+                        <i class="fa-solid fa-link text-xs"></i> {{ venda.ordem_servico.numero }}
+                    </a>
+                {% else %}
+                    <span class="text-sm text-slate-500 mt-0.5 block">Venda Avulsa</span>
+                {% endif %}
+            </div>
+
+            <!-- Forma de Pagamento -->
+            <div>
+                <span class="block text-xs text-slate-400 font-medium">Forma de Pagamento</span>
+                <span class="text-sm font-semibold text-slate-800 mt-0.5 block">
+                    {{ venda.forma_pagamento or 'Não especificado' }}
+                </span>
+            </div>
+
+            <!-- Data do Registro -->
+            <div>
+                <span class="block text-xs text-slate-400 font-medium">Data & Hora</span>
+                <span class="text-sm font-semibold text-slate-800 mt-0.5 block">
+                    {{ venda.data | format_datetime }}
+                </span>
+            </div>
+
+        </div>
+
+        {% if venda.observacoes %}
+            <div class="mt-4 pt-4 border-t border-slate-100">
+                <span class="block text-xs text-slate-400 font-medium">Observações</span>
+                <p class="text-xs text-slate-600 mt-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    {{ venda.observacoes }}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Itens da Venda -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100">
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-blue-600"></i>
+                Itens Faturados ({{ venda.itens|length }})
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Discriminação detalhada de peças e serviços</p>
+        </div>
+
+        <!-- Tabela Responsiva de Itens -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
+                        <th class="py-3 px-4">Tipo</th>
+                        <th class="py-3 px-4">Descrição do Item</th>
+                        <th class="py-3 px-4 text-center">Quantidade</th>
+                        <th class="py-3 px-4 text-right">Valor Unitário</th>
+                        <th class="py-3 px-4 text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for item in venda.itens %}
+                        <tr class="hover:bg-slate-50/70 transition-colors">
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                {% if item.tipo == 'peca' %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                        Peça / Insumo
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                                        Serviço
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3.5 px-4 font-medium text-slate-900">
+                                {{ item.descricao }}
+                            </td>
+                            <td class="py-3.5 px-4 text-center font-semibold">
+                                {{ item.quantidade }}
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-medium text-slate-600 whitespace-nowrap">
+                                {{ item.valor_unitario | currency }}
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-bold text-slate-900 whitespace-nowrap">
+                                {{ item.subtotal | currency }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="bg-slate-50/80 border-t-2 border-slate-200">
+                        <td colspan="4" class="py-4 px-4 text-right font-bold text-slate-700 text-sm">
+                            Valor Total da Venda:
+                        </td>
+                        <td class="py-4 px-4 text-right font-extrabold text-emerald-600 text-lg whitespace-nowrap">
+                            {{ venda.valor_total | currency }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
