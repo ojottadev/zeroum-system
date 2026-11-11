@@ -150,3 +150,31 @@ class ItemVenda(db.Model):
 
     def __repr__(self):
         return f'<ItemVenda {self.descricao}>'
+
+
+class MovimentacaoCaixa(db.Model):
+    """
+    Modelo de Movimentação de Caixa (Entradas e Saídas).
+    Registra fluxo financeiro, receitas de O.S./Vendas e despesas avulsas.
+    """
+    __tablename__ = 'movimentacoes_caixa'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(10), nullable=False, index=True)  # 'entrada' ou 'saida'
+    descricao = db.Column(db.String(255), nullable=False)
+    valor = db.Column(db.Float, default=0.0, nullable=False)
+    categoria = db.Column(db.String(60), default='Outros', nullable=False)
+    forma_pagamento = db.Column(db.String(50), nullable=True)  # Dinheiro, PIX, Cartão de Crédito, etc.
+    data = db.Column(db.DateTime, default=datetime.now, nullable=False, index=True)
+    ordem_servico_id = db.Column(db.Integer, db.ForeignKey('ordens_servico.id'), nullable=True)
+    venda_id = db.Column(db.Integer, db.ForeignKey('vendas.id'), nullable=True)
+    observacoes = db.Column(db.Text, nullable=True)
+    criado_em = db.Column(db.DateTime, default=datetime.now, nullable=False)
+
+    # Relacionamentos com O.S. e Venda
+    ordem_servico = db.relationship('OrdemServico', backref=db.backref('movimentacoes_caixa', lazy=True, cascade='all'))
+    venda = db.relationship('Venda', backref=db.backref('movimentacoes_caixa', lazy=True, cascade='all'))
+
+    def __repr__(self):
+        return f'<MovimentacaoCaixa #{self.id} {self.tipo}: R$ {self.valor:.2f}>'
+

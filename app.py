@@ -10,7 +10,7 @@ from flask import (
     Flask, render_template, request, redirect,
     url_for, flash, get_flashed_messages
 )
-from models import db, Cliente, OrdemServico, Venda, ItemVenda
+from models import db, Cliente, OrdemServico, Venda, ItemVenda, MovimentacaoCaixa
 
 # Configuração da Aplicação Flask
 app = Flask(__name__)
@@ -176,6 +176,74 @@ FORMAS_PAGAMENTO_LISTA = [
     'Outro'
 ]
 
+CATEGORIAS_ENTRADA = [
+    'Serviço / O.S.',
+    'Venda Balcão',
+    'Aporte / Abertura de Caixa',
+    'Outras Entradas'
+]
+
+CATEGORIAS_SAIDA = [
+    'Peças e Componentes',
+    'Ferramentas e Insumos',
+    'Despesas Fixas (Aluguel, Luz, Internet)',
+    'Sangria / Retirada',
+    'Alimentação / Transporte',
+    'Outras Saídas'
+]
+
+
+def sincronizar_caixa_venda(venda):
+    """Sincroniza automaticamente a movimentação de caixa quando uma venda for paga."""
+    mov = MovimentacaoCaixa.query.filter_by(venda_id=venda.id).first()
+    if venda.status == 'Pago' and (venda.valor_total or 0.0) > 0:
+        cliente_str = f" - {venda.cliente.nome}" if venda.cliente else ""
+        if not mov:
+            mov = MovimentacaoCaixa(
+                tipo='entrada',
+                descricao=f"Venda {venda.numero}{cliente_str}",
+                valor=venda.valor_total,
+                categoria="Venda Balcão",
+                forma_pagamento=venda.forma_pagamento or "Outro",
+                data=venda.data or datetime.now(),
+                venda_id=venda.id
+            )
+            db.session.add(mov)
+        else:
+            mov.tipo = 'entrada'
+            mov.descricao = f"Venda {venda.numero}{cliente_str}"
+            mov.valor = venda.valor_total
+            mov.forma_pagamento = venda.forma_pagamento or "Outro"
+            mov.data = venda.data or datetime.now()
+    else:
+        if mov:
+            db.session.delete(mov)
+
+
+def sincronizar_caixa_os(os_obj):
+    """Sincroniza automaticamente a movimentação de caixa quando uma O.S. for Entregue."""
+    mov = MovimentacaoCaixa.query.filter_by(ordem_servico_id=os_obj.id).first()
+    if os_obj.status == 'Entregue' and (os_obj.valor_total or 0.0) > 0:
+        cliente_nome = os_obj.cliente.nome if os_obj.cliente else "Cliente"
+        if not mov:
+            mov = MovimentacaoCaixa(
+                tipo='entrada',
+                descricao=f"O.S. {os_obj.numero} - {cliente_nome}",
+                valor=os_obj.valor_total,
+                categoria="Serviço / O.S.",
+                forma_pagamento="PIX",
+                data=os_obj.data_entrega or datetime.now(),
+                ordem_servico_id=os_obj.id
+            )
+            db.session.add(mov)
+        else:
+            mov.valor = os_obj.valor_total
+            mov.descricao = f"O.S. {os_obj.numero} - {cliente_nome}"
+    elif os_obj.status in ['Cancelado', 'Aberto', 'Em diagnóstico', 'Aguardando peça', 'Em reparo']:
+        if mov:
+            db.session.delete(mov)
+
+
 
 # ==============================================================================
 # ROTAS: 1. DASHBOARD
@@ -268,6 +336,10 @@ def clientes_novo():
             flash('O campo Nome é obrigatório!', 'error')
             return render_template('clientes/form.html', cliente=None, acao='novo')
 
+        if not telefone:
+            flash('O campo Telefone é obrigatório!', 'error')
+            return render_template('clientes/form.html', cliente=None, acao='novo')
+
         novo_cliente = Cliente(
             nome=nome,
             cpf_cnpj=cpf_cnpj,
@@ -300,13 +372,17 @@ def clientes_editar(id):
 
     if request.method == 'POST':
         nome = request.form.get('nome', '').strip()
+        telefone = request.form.get('telefone', '').strip()
         if not nome:
             flash('O campo Nome é obrigatório!', 'error')
             return render_template('clientes/form.html', cliente=cliente, acao='editar')
 
+        if not telefone:
+            flash('O campo Telefone é obrigatório!', 'error')
+            return render_template('clientes/form.html', cliente=cliente, acao='editar')
+
         cliente.nome = nome
-        cliente.cpf_cnpj = request.form.get('cpf_cnpj', '').strip()
-        cliente.telefone = request.form.get('telefone', '').strip()
+        cliente.telefone = telefone
         cliente.email = request.form.get('email', '').strip()
         cliente.endereco = request.form.get('endereco', '').strip()
         cliente.observacoes = request.form.get('observacoes', '').strip()
@@ -512,6 +588,7 @@ def os_editar(id):
         # Aplica mudança de status e regras automáticas
         novo_status = request.form.get('status', os_obj.status)
         aplicar_regras_status_os(os_obj, novo_status)
+        sincronizar_caixa_os(os_obj)
 
         db.session.commit()
         flash(f'Ordem de Serviço {os_obj.numero} atualizada com sucesso!', 'success')
@@ -534,6 +611,7 @@ def os_status_rapido(id):
 
     if novo_status in STATUS_OS_LISTA:
         aplicar_regras_status_os(os_obj, novo_status)
+        sincronizar_caixa_os(os_obj)
         db.session.commit()
         flash(f'Status da O.S. {os_obj.numero} alterado para "{novo_status}".', 'success')
     else:
@@ -671,6 +749,10 @@ def vendas_nova():
         db.session.add(nova_venda)
         db.session.commit()
 
+        # Sincroniza entrada no Caixa caso a venda seja paga
+        sincronizar_caixa_venda(nova_venda)
+        db.session.commit()
+
         flash(f'Venda {nova_venda.numero} registrada com sucesso no valor de {format_currency(valor_total_calculado)}!', 'success')
         return redirect(url_for('vendas_detalhe', id=nova_venda.id))
 
@@ -706,6 +788,9 @@ def vendas_excluir(id):
     """Exclui uma venda. Se vinculada a uma O.S., desconta o valor correspondente do campo valor_pecas."""
     venda = db.get_or_404(Venda, id)
 
+    # Remove qualquer movimentação de caixa vinculada a esta venda
+    MovimentacaoCaixa.query.filter_by(venda_id=venda.id).delete()
+
     # Se estiver vinculada a uma O.S., reverte a soma do valor_pecas
     if venda.ordem_servico_id:
         os_vinculada = db.session.get(OrdemServico, venda.ordem_servico_id)
@@ -720,162 +805,164 @@ def vendas_excluir(id):
 
 
 # ==============================================================================
-# INICIALIZAÇÃO DO BANCO DE DADOS E CARGA DE DADOS INICIAIS DE DEMONSTRAÇÃO
+# ROTAS: 5. FLUXO DE CAIXA
+# ==============================================================================
+
+@app.route('/caixa')
+def caixa_lista():
+    """
+    Listagem de Movimentações Financeiras (Fluxo de Caixa).
+    Exibe saldo atual, total de entradas, total de saídas e extrato detalhado.
+    """
+    periodo = request.args.get('periodo', 'mes').strip().lower()
+    tipo_filtro = request.args.get('tipo', 'todos').strip().lower()
+    q = request.args.get('q', '').strip()
+
+    agora = datetime.now()
+    data_inicio = None
+    data_fim = None
+
+    if periodo == 'hoje':
+        data_inicio = datetime(agora.year, agora.month, agora.day, 0, 0, 0)
+        data_fim = datetime(agora.year, agora.month, agora.day, 23, 59, 59)
+    elif periodo == 'mes':
+        data_inicio = datetime(agora.year, agora.month, 1, 0, 0, 0)
+        _, ultimo_dia = monthrange(agora.year, agora.month)
+        data_fim = datetime(agora.year, agora.month, ultimo_dia, 23, 59, 59)
+    elif periodo == 'ano':
+        data_inicio = datetime(agora.year, 1, 1, 0, 0, 0)
+        data_fim = datetime(agora.year, 12, 31, 23, 59, 59)
+
+    # Query base para os cards de totais do período selecionado
+    query_totais = MovimentacaoCaixa.query
+    if data_inicio and data_fim:
+        query_totais = query_totais.filter(MovimentacaoCaixa.data >= data_inicio, MovimentacaoCaixa.data <= data_fim)
+
+    movimentacoes_periodo = query_totais.all()
+    total_entradas = sum(m.valor for m in movimentacoes_periodo if m.tipo == 'entrada')
+    total_saidas = sum(m.valor for m in movimentacoes_periodo if m.tipo == 'saida')
+    saldo_periodo = total_entradas - total_saidas
+
+    # Saldo Geral Acumulado (histórico total)
+    todas_mov = MovimentacaoCaixa.query.all()
+    saldo_geral = sum(m.valor if m.tipo == 'entrada' else -m.valor for m in todas_mov)
+
+    # Query filtrada para exibição na lista
+    query_lista = MovimentacaoCaixa.query
+    if data_inicio and data_fim:
+        query_lista = query_lista.filter(MovimentacaoCaixa.data >= data_inicio, MovimentacaoCaixa.data <= data_fim)
+
+    if tipo_filtro in ['entrada', 'saida']:
+        query_lista = query_lista.filter(MovimentacaoCaixa.tipo == tipo_filtro)
+
+    if q:
+        termo = f"%{q}%"
+        query_lista = query_lista.filter(
+            (MovimentacaoCaixa.descricao.ilike(termo)) |
+            (MovimentacaoCaixa.categoria.ilike(termo)) |
+            (MovimentacaoCaixa.forma_pagamento.ilike(termo))
+        )
+
+    movimentacoes = query_lista.order_by(MovimentacaoCaixa.data.desc(), MovimentacaoCaixa.id.desc()).all()
+
+    return render_template(
+        'caixa/lista.html',
+        movimentacoes=movimentacoes,
+        total_entradas=total_entradas,
+        total_saidas=total_saidas,
+        saldo_periodo=saldo_periodo,
+        saldo_geral=saldo_geral,
+        periodo=periodo,
+        tipo_filtro=tipo_filtro,
+        termo_busca=q,
+        categorias_entrada=CATEGORIAS_ENTRADA,
+        categorias_saida=CATEGORIAS_SAIDA,
+        formas_pagamento=FORMAS_PAGAMENTO_LISTA
+    )
+
+
+@app.route('/caixa/novo', methods=['GET', 'POST'])
+def caixa_novo():
+    """Cadastro de movimentação financeira manual (Entrada ou Saída)."""
+    if request.method == 'POST':
+        tipo = request.form.get('tipo', '').strip().lower()
+        descricao = request.form.get('descricao', '').strip()
+        categoria = request.form.get('categoria', '').strip()
+        forma_pagamento = request.form.get('forma_pagamento', '').strip()
+        data_str = request.form.get('data', '').strip()
+        observacoes = request.form.get('observacoes', '').strip()
+
+        if tipo not in ['entrada', 'saida']:
+            flash('Selecione se o lançamento é uma Entrada ou Saída!', 'error')
+            return redirect(url_for('caixa_lista'))
+
+        if not descricao:
+            flash('A descrição do lançamento é obrigatória!', 'error')
+            return redirect(url_for('caixa_lista'))
+
+        try:
+            valor_raw = request.form.get('valor', '0').replace('.', '').replace(',', '.')
+            valor = float(valor_raw)
+            if valor <= 0:
+                raise ValueError()
+        except (ValueError, TypeError):
+            flash('Informe um valor monetário válido maior que zero!', 'error')
+            return redirect(url_for('caixa_lista'))
+
+        data_mov = datetime.now()
+        if data_str:
+            try:
+                data_parsed = datetime.strptime(data_str, '%Y-%m-%d')
+                data_mov = data_mov.replace(year=data_parsed.year, month=data_parsed.month, day=data_parsed.day)
+            except ValueError:
+                pass
+
+        nova_mov = MovimentacaoCaixa(
+            tipo=tipo,
+            descricao=descricao,
+            valor=valor,
+            categoria=categoria or ('Outras Entradas' if tipo == 'entrada' else 'Outras Saídas'),
+            forma_pagamento=forma_pagamento or 'Dinheiro',
+            data=data_mov,
+            observacoes=observacoes
+        )
+        db.session.add(nova_mov)
+        db.session.commit()
+
+        tipo_nome = "Entrada" if tipo == 'entrada' else "Saída"
+        flash(f'{tipo_nome} de {format_currency(valor)} lançada no caixa com sucesso!', 'success')
+        return redirect(url_for('caixa_lista'))
+
+    tipo_pre = request.args.get('tipo', 'entrada').lower()
+    return render_template(
+        'caixa/form.html',
+        tipo_pre=tipo_pre,
+        categorias_entrada=CATEGORIAS_ENTRADA,
+        categorias_saida=CATEGORIAS_SAIDA,
+        formas_pagamento=FORMAS_PAGAMENTO_LISTA
+    )
+
+
+@app.route('/caixa/<int:id>/excluir', methods=['POST'])
+def caixa_excluir(id):
+    """Exclui uma movimentação financeira."""
+    mov = db.get_or_404(MovimentacaoCaixa, id)
+    desc = mov.descricao
+    valor = mov.valor
+    db.session.delete(mov)
+    db.session.commit()
+
+    flash(f'Lançamento "{desc}" no valor de {format_currency(valor)} removido do caixa.', 'success')
+    return redirect(url_for('caixa_lista'))
+
+
+# ==============================================================================
+# INICIALIZAÇÃO DO BANCO DE DADOS
 # ==============================================================================
 
 def popular_dados_iniciais():
-    """Insere alguns dados de teste para demonstração inicial se o banco estiver vazio."""
-    if Cliente.query.first():
-        return  # Já possui dados
-
-    # 1. Clientes de exemplo
-    c1 = Cliente(
-        nome="Lucas Andrade Silva",
-        cpf_cnpj="123.456.789-00",
-        telefone="(11) 98765-4321",
-        email="lucas.andrade@email.com",
-        endereco="Av. Paulista, 1000 - Bela Vista, São Paulo/SP",
-        observacoes="Cliente preferencial, contato via WhatsApp.",
-        criado_em=datetime.now()
-    )
-    c2 = Cliente(
-        nome="Mariana Costa Fernandes",
-        cpf_cnpj="987.654.321-11",
-        telefone="(11) 99123-8877",
-        email="mariana.costa@empresa.com.br",
-        endereco="Rua Augusta, 450 - Consolação, São Paulo/SP",
-        observacoes="Empresa de design, requer nota fiscal.",
-        criado_em=datetime.now()
-    )
-    c3 = Cliente(
-        nome="Tech Solutions Comércio Ltda",
-        cpf_cnpj="12.345.678/0001-99",
-        telefone="(11) 3322-1100",
-        email="contato@techsolutions.com",
-        endereco="Rua Funchal, 200 - Vila Olímpia, São Paulo/SP",
-        observacoes="Contrato de manutenção para 15 computadores.",
-        criado_em=datetime.now()
-    )
-
-    db.session.add_all([c1, c2, c3])
-    db.session.commit()
-
-    # 2. Ordens de Serviço de exemplo
-    os1 = OrdemServico(
-        numero=gerar_numero_os(),
-        cliente_id=c1.id,
-        tipo_equipamento="Smartphone",
-        marca="Apple",
-        modelo="iPhone 13 Pro 128GB",
-        numero_serie="DNPTL890N6HK",
-        senha_equipamento="123456",
-        problema="Tela frontal trincada após queda e bateria descarregando rapidamente.",
-        diagnostico="Substituição da tela OLED frontal e substituição da bateria original.",
-        status="Em reparo",
-        tecnico="Carlos Roberto",
-        data_abertura=datetime.now(),
-        data_previsao=date.today(),
-        valor_mao_obra=180.0,
-        valor_pecas=0.0
-    )
-    db.session.add(os1)
-    db.session.commit()
-
-    os2 = OrdemServico(
-        numero=gerar_numero_os(),
-        cliente_id=c2.id,
-        tipo_equipamento="Notebook",
-        marca="Dell",
-        modelo="Inspiron 15 5510",
-        numero_serie="BFC89J2",
-        senha_equipamento="sem senha",
-        problema="Não liga ao pressionar botão power. LED do conector pisca em laranja.",
-        diagnostico="Curto-circuito na linha secundária de 3.3V na placa-mãe.",
-        status="Aberto",
-        tecnico="Carlos Roberto",
-        data_abertura=datetime.now(),
-        valor_mao_obra=350.0,
-        valor_pecas=0.0
-    )
-    db.session.add(os2)
-    db.session.commit()
-
-    os3 = OrdemServico(
-        numero=gerar_numero_os(),
-        cliente_id=c3.id,
-        tipo_equipamento="Notebook",
-        marca="Lenovo",
-        modelo="ThinkPad T14 Gen 2",
-        numero_serie="PF20XK99",
-        senha_equipamento="admin2026",
-        problema="Lentidão extrema e superaquecimento durante reuniões no Teams.",
-        diagnostico="Pasta térmica ressecada, poeira no cooler e SSD SATA precisando de upgrade para NVMe.",
-        status="Pronto",
-        tecnico="Marcos Paulo",
-        data_abertura=datetime.now(),
-        data_conclusao=datetime.now(),
-        valor_mao_obra=150.0,
-        valor_pecas=0.0
-    )
-    db.session.add(os3)
-    db.session.commit()
-
-    # 3. Venda vinculada à OS 1
-    venda1 = Venda(
-        numero=gerar_numero_venda(),
-        cliente_id=c1.id,
-        ordem_servico_id=os1.id,
-        data=datetime.now(),
-        valor_total=720.0,
-        forma_pagamento="PIX",
-        status="Pago",
-        observacoes="Peças aplicadas na O.S. " + os1.numero
-    )
-    item1 = ItemVenda(
-        descricao="Tela OLED iPhone 13 Pro Premium",
-        quantidade=1,
-        valor_unitario=520.0,
-        tipo="peca"
-    )
-    item2 = ItemVenda(
-        descricao="Bateria Original iPhone 13 Pro",
-        quantidade=1,
-        valor_unitario=200.0,
-        tipo="peca"
-    )
-    venda1.itens = [item1, item2]
-
-    # Atualiza o valor_pecas na OS 1
-    os1.valor_pecas = 720.0
-    db.session.add(venda1)
-    db.session.commit()
-
-    # 4. Venda avulsa paga
-    venda2 = Venda(
-        numero=gerar_numero_venda(),
-        cliente_id=c2.id,
-        ordem_servico_id=None,
-        data=datetime.now(),
-        valor_total=190.0,
-        forma_pagamento="Cartão de Crédito",
-        status="Pago",
-        observacoes="Venda de acessórios na loja."
-    )
-    item3 = ItemVenda(
-        descricao="Fonte Carregador USB-C 65W GaN Universal",
-        quantidade=1,
-        valor_unitario=140.0,
-        tipo="peca"
-    )
-    item4 = ItemVenda(
-        descricao="Cabo USB-C Trançado Reforçado 2m",
-        quantidade=1,
-        valor_unitario=50.0,
-        tipo="peca"
-    )
-    venda2.itens = [item3, item4]
-    db.session.add(venda2)
-    db.session.commit()
+    """Não insere dados fictícios. Mantém a base limpa para uso em produção."""
+    pass
 
 
 # Cria as tabelas do banco automaticamente na inicialização

@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Fluxo de Caixa{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Topo: Título e Botões de Ação -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900">Fluxo de Caixa</h1>
+            <p class="text-sm text-slate-500 mt-0.5">Controle de receitas, despesas e saldo financeiro</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('caixa_novo', tipo='saida') }}" 
+               class="inline-flex items-center gap-2 px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 border border-rose-200 text-sm font-semibold rounded-xl shadow-sm transition-all">
+                <i class="fa-solid fa-arrow-trend-down text-rose-600"></i>
+                <span>Nova Saída</span>
+            </a>
+            <a href="{{ url_for('caixa_novo', tipo='entrada') }}" 
+               class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-semibold rounded-xl shadow-sm shadow-emerald-500/20 hover:shadow-md transition-all">
+                <i class="fa-solid fa-arrow-trend-up"></i>
+                <span>Nova Entrada</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Cards de Métricas / KPIs -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Saldo do Período -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Saldo do Período</span>
+                <div class="w-9 h-9 rounded-xl {% if saldo_periodo >= 0 %}bg-emerald-100 text-emerald-600{% else %}bg-rose-100 text-rose-600{% endif %} flex items-center justify-center">
+                    <i class="fa-solid fa-wallet text-sm"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <span class="text-2xl sm:text-3xl font-extrabold {% if saldo_periodo >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                    {{ saldo_periodo|currency }}
+                </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">
+                Saldo geral acumulado: <strong class="text-slate-600">{{ saldo_geral|currency }}</strong>
+            </p>
+        </div>
+
+        <!-- Total de Entradas -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Entradas</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <i class="fa-solid fa-circle-arrow-up text-sm"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <span class="text-2xl sm:text-3xl font-extrabold text-emerald-600">
+                    + {{ total_entradas|currency }}
+                </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Receitas e pagamentos recebidos</p>
+        </div>
+
+        <!-- Total de Saídas -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Saídas</span>
+                <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                    <i class="fa-solid fa-circle-arrow-down text-sm"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <span class="text-2xl sm:text-3xl font-extrabold text-rose-600">
+                    - {{ total_saidas|currency }}
+                </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Despesas, compras e retiradas</p>
+        </div>
+    </div>
+
+    <!-- Barra de Filtros e Pesquisa -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+        <!-- Pílulas de Filtro Rápido (Período e Tipo) -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <!-- Filtro de Período -->
+            <div class="flex flex-wrap items-center gap-1.5 text-xs font-medium">
+                <span class="text-slate-400 mr-1 hidden sm:inline">Período:</span>
+                <a href="{{ url_for('caixa_lista', periodo='hoje', tipo=tipo_filtro, q=termo_busca) }}" 
+                   class="px-3 py-1.5 rounded-lg transition-colors {% if periodo == 'hoje' %}bg-blue-600 text-white font-semibold shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                    Hoje
+                </a>
+                <a href="{{ url_for('caixa_lista', periodo='mes', tipo=tipo_filtro, q=termo_busca) }}" 
+                   class="px-3 py-1.5 rounded-lg transition-colors {% if periodo == 'mes' %}bg-blue-600 text-white font-semibold shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                    Este Mês
+                </a>
+                <a href="{{ url_for('caixa_lista', periodo='ano', tipo=tipo_filtro, q=termo_busca) }}" 
+                   class="px-3 py-1.5 rounded-lg transition-colors {% if periodo == 'ano' %}bg-blue-600 text-white font-semibold shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                    Este Ano
+                </a>
+                <a href="{{ url_for('caixa_lista', periodo='tudo', tipo=tipo_filtro, q=termo_busca) }}" 
+                   class="px-3 py-1.5 rounded-lg transition-colors {% if periodo == 'tudo' %}bg-blue-600 text-white font-semibold shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                    Todos
+                </a>
+            </div>
+
+            <!-- Filtro de Tipo -->
+            <div class="flex items-center gap-1 text-xs font-medium">
+                <a href="{{ url_for('caixa_lista', periodo=periodo, tipo='todos', q=termo_busca) }}" 
+                   class="px-2.5 py-1.5 rounded-lg transition-colors {% if tipo_filtro == 'todos' %}bg-slate-800 text-white font-semibold{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                    Todos
+                </a>
+                <a href="{{ url_for('caixa_lista', periodo=periodo, tipo='entrada', q=termo_busca) }}" 
+                   class="px-2.5 py-1.5 rounded-lg transition-colors {% if tipo_filtro == 'entrada' %}bg-emerald-600 text-white font-semibold{% else %}bg-slate-100 text-emerald-700 hover:bg-emerald-50{% endif %}">
+                    <i class="fa-solid fa-arrow-up mr-1 text-[10px]"></i>Entradas
+                </a>
+                <a href="{{ url_for('caixa_lista', periodo=periodo, tipo='saida', q=termo_busca) }}" 
+                   class="px-2.5 py-1.5 rounded-lg transition-colors {% if tipo_filtro == 'saida' %}bg-rose-600 text-white font-semibold{% else %}bg-slate-100 text-rose-700 hover:bg-rose-50{% endif %}">
+                    <i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Saídas
+                </a>
+            </div>
+        </div>
+
+        <!-- Linha de Busca -->
+        <form method="GET" action="{{ url_for('caixa_lista') }}" class="flex gap-2">
+            <input type="hidden" name="periodo" value="{{ periodo }}">
+            <input type="hidden" name="tipo" value="{{ tipo_filtro }}">
+            <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </div>
+                <input type="text" name="q" value="{{ termo_busca }}" 
+                       placeholder="Buscar por descrição, categoria ou forma de pagamento..." 
+                       class="block w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+            </div>
+            <button type="submit" 
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-medium rounded-xl transition-colors">
+                Buscar
+            </button>
+            {% if termo_busca %}
+                <a href="{{ url_for('caixa_lista', periodo=periodo, tipo=tipo_filtro) }}" 
+                   class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs sm:text-sm font-medium rounded-xl transition-colors flex items-center" title="Limpar">
+                    Limpar
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Lista de Movimentações -->
+    {% if movimentacoes %}
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <!-- Tabela Desktop -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-600">
+                    <thead class="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
+                        <tr>
+                            <th class="px-5 py-3.5">Data / Hora</th>
+                            <th class="px-5 py-3.5">Tipo</th>
+                            <th class="px-5 py-3.5">Descrição</th>
+                            <th class="px-5 py-3.5">Categoria</th>
+                            <th class="px-5 py-3.5">Pagamento</th>
+                            <th class="px-5 py-3.5 text-right">Valor</th>
+                            <th class="px-5 py-3.5 text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for m in movimentacoes %}
+                            <tr class="hover:bg-slate-50/80 transition-colors">
+                                <td class="px-5 py-3.5 whitespace-nowrap text-xs text-slate-500 font-medium">
+                                    {{ m.data|format_datetime }}
+                                </td>
+                                <td class="px-5 py-3.5 whitespace-nowrap">
+                                    {% if m.tipo == 'entrada' %}
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                            <i class="fa-solid fa-arrow-up text-[10px]"></i> Entrada
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                                            <i class="fa-solid fa-arrow-down text-[10px]"></i> Saída
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-5 py-3.5 font-medium text-slate-900">
+                                    {{ m.descricao }}
+                                    {% if m.observacoes %}
+                                        <span class="block text-xs font-normal text-slate-400 mt-0.5">{{ m.observacoes }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-5 py-3.5 whitespace-nowrap text-xs text-slate-500">
+                                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                                        {{ m.categoria }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-3.5 whitespace-nowrap text-xs text-slate-500">
+                                    {{ m.forma_pagamento or '—' }}
+                                </td>
+                                <td class="px-5 py-3.5 whitespace-nowrap text-right font-bold text-sm {% if m.tipo == 'entrada' %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                                    {% if m.tipo == 'entrada' %}+{% else %}-{% endif %} {{ m.valor|currency }}
+                                </td>
+                                <td class="px-5 py-3.5 whitespace-nowrap text-center text-xs">
+                                    {% if m.venda_id %}
+                                        <a href="{{ url_for('vendas_detalhe', id=m.venda_id) }}" 
+                                           class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-lg transition-colors" title="Ver Venda vinculada">
+                                            Ver Venda
+                                        </a>
+                                    {% elif m.ordem_servico_id %}
+                                        <a href="{{ url_for('os_detalhe', id=m.ordem_servico_id) }}" 
+                                           class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-lg transition-colors" title="Ver O.S. vinculada">
+                                            Ver O.S.
+                                        </a>
+                                    {% else %}
+                                        <form method="POST" action="{{ url_for('caixa_excluir', id=m.id) }}" 
+                                              onsubmit="return confirm('Deseja excluir este lançamento do caixa?')" 
+                                              class="inline-block">
+                                            <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors" title="Excluir">
+                                                <i class="fa-regular fa-trash-can"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Visualização Mobile (Cards) -->
+            <div class="md:hidden divide-y divide-slate-100">
+                {% for m in movimentacoes %}
+                    <div class="p-4 flex items-center justify-between gap-3">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center {% if m.tipo == 'entrada' %}bg-emerald-100 text-emerald-600{% else %}bg-rose-100 text-rose-600{% endif %}">
+                                <i class="fa-solid {% if m.tipo == 'entrada' %}fa-arrow-up{% else %}fa-arrow-down{% endif %} text-sm"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-bold text-sm text-slate-900 truncate">{{ m.descricao }}</p>
+                                <div class="flex flex-wrap items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                                    <span>{{ m.data|format_datetime }}</span>
+                                    <span>•</span>
+                                    <span class="text-slate-600 font-medium">{{ m.categoria }}</span>
+                                    {% if m.forma_pagamento %}
+                                        <span>•</span>
+                                        <span>{{ m.forma_pagamento }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right shrink-0">
+                            <span class="block font-extrabold text-sm sm:text-base {% if m.tipo == 'entrada' %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                                {% if m.tipo == 'entrada' %}+{% else %}-{% endif %} {{ m.valor|currency }}
+                            </span>
+                            {% if not m.venda_id and not m.ordem_servico_id %}
+                                <form method="POST" action="{{ url_for('caixa_excluir', id=m.id) }}" 
+                                      onsubmit="return confirm('Deseja excluir este lançamento?')" 
+                                      class="inline-block mt-1">
+                                    <button type="submit" class="text-xs text-rose-500 hover:text-rose-700">
+                                        Excluir
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <!-- Estado Vazio -->
+        <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                <i class="fa-solid fa-cash-register text-2xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">Nenhuma movimentação encontrada</h3>
+            <p class="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-5">
+                Não há lançamentos registrados para o filtro selecionado. Lance entradas e saídas para acompanhar seu fluxo.
+            </p>
+            <div class="flex flex-wrap items-center justify-center gap-3">
+                <a href="{{ url_for('caixa_novo', tipo='entrada') }}" 
+                   class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm">
+                    <i class="fa-solid fa-plus mr-1"></i> Nova Entrada
+                </a>
+                <a href="{{ url_for('caixa_novo', tipo='saida') }}" 
+                   class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm">
+                    <i class="fa-solid fa-minus mr-1"></i> Nova Saída
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -50,10 +50,26 @@
 
             <!-- Linha 2: CPF/CNPJ e Telefone -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- CPF/CNPJ -->
+                <!-- Telefone / WhatsApp (Obrigatório) -->
+                <div>
+                    <label for="telefone" class="block text-sm font-semibold text-slate-700 mb-1">
+                        Telefone / WhatsApp <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-phone text-sm"></i>
+                        </div>
+                        <input type="tel" id="telefone" name="telefone" required
+                               value="{{ cliente.telefone if cliente else '' }}"
+                               placeholder="(11) 98765-4321" 
+                               class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                    </div>
+                </div>
+
+                <!-- CPF/CNPJ (Opcional) -->
                 <div>
                     <label for="cpf_cnpj" class="block text-sm font-semibold text-slate-700 mb-1">
-                        CPF ou CNPJ
+                        CPF ou CNPJ <span class="text-xs font-normal text-slate-400">(Opcional)</span>
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -65,28 +81,12 @@
                                class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
                     </div>
                 </div>
-
-                <!-- Telefone / WhatsApp -->
-                <div>
-                    <label for="telefone" class="block text-sm font-semibold text-slate-700 mb-1">
-                        Telefone / WhatsApp
-                    </label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                            <i class="fa-solid fa-phone text-sm"></i>
-                        </div>
-                        <input type="tel" id="telefone" name="telefone"
-                               value="{{ cliente.telefone if cliente else '' }}"
-                               placeholder="(11) 98765-4321" 
-                               class="block w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
-                    </div>
-                </div>
             </div>
 
-            <!-- E-mail -->
+            <!-- E-mail (Opcional) -->
             <div>
                 <label for="email" class="block text-sm font-semibold text-slate-700 mb-1">
-                    E-mail
+                    E-mail <span class="text-xs font-normal text-slate-400">(Opcional)</span>
                 </label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -99,10 +99,10 @@
                 </div>
             </div>
 
-            <!-- Endereço -->
+            <!-- Endereço (Opcional) -->
             <div>
                 <label for="endereco" class="block text-sm font-semibold text-slate-700 mb-1">
-                    Endereço Completo
+                    Endereço Completo <span class="text-xs font-normal text-slate-400">(Opcional)</span>
                 </label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -115,10 +115,10 @@
                 </div>
             </div>
 
-            <!-- Observações -->
+            <!-- Observações (Opcional) -->
             <div>
                 <label for="observacoes" class="block text-sm font-semibold text-slate-700 mb-1">
-                    Observações Adicionais
+                    Observações Adicionais <span class="text-xs font-normal text-slate-400">(Opcional)</span>
                 </label>
                 <textarea id="observacoes" name="observacoes" rows="3"
                           placeholder="Informações relevantes sobre preferências, horários de contato ou particularidades do cliente..."

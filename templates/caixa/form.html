@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Lançamento - Caixa{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto space-y-6">
+
+    <!-- Topo / Breadcrumb -->
+    <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-medium text-slate-500 mb-1">
+                <a href="{{ url_for('caixa_lista') }}" class="hover:text-blue-600 transition-colors">Caixa</a>
+                <span>/</span>
+                <span class="text-slate-700">Novo Lançamento</span>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900">Novo Lançamento Financeiro</h1>
+        </div>
+        <a href="{{ url_for('caixa_lista') }}" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+            Voltar
+        </a>
+    </div>
+
+    <!-- Formulário -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
+        <form method="POST" action="{{ url_for('caixa_novo') }}" class="space-y-5">
+            
+            <!-- Tipo de Lançamento (Entrada ou Saída) -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                    Tipo de Movimentação <span class="text-rose-500">*</span>
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="relative flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
+                           id="label-entrada">
+                        <input type="radio" name="tipo" value="entrada" id="radio-entrada"
+                               {% if tipo_pre == 'entrada' %}checked{% endif %}
+                               class="sr-only" onchange="atualizarEstiloTipo()">
+                        <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </div>
+                        <span class="font-bold text-sm text-slate-800">Entrada (Receita)</span>
+                    </label>
+
+                    <label class="relative flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
+                           id="label-saida">
+                        <input type="radio" name="tipo" value="saida" id="radio-saida"
+                               {% if tipo_pre == 'saida' %}checked{% endif %}
+                               class="sr-only" onchange="atualizarEstiloTipo()">
+                        <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center text-sm">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <span class="font-bold text-sm text-slate-800">Saída (Despesa)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Valor -->
+            <div>
+                <label for="valor" class="block text-sm font-semibold text-slate-700 mb-1">
+                    Valor (R$) <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-bold text-sm">
+                        R$
+                    </div>
+                    <input type="text" id="valor" name="valor" required autofocus
+                           placeholder="0,00"
+                           class="block w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                </div>
+            </div>
+
+            <!-- Descrição -->
+            <div>
+                <label for="descricao" class="block text-sm font-semibold text-slate-700 mb-1">
+                    Descrição do Lançamento <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" id="descricao" name="descricao" required
+                       placeholder="Ex: Compra de tela para estoque, Aluguel, Troco de abertura..." 
+                       class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+            </div>
+
+            <!-- Linha: Categoria e Forma de Pagamento -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Categoria -->
+                <div>
+                    <label for="categoria" class="block text-sm font-semibold text-slate-700 mb-1">
+                        Categoria
+                    </label>
+                    <select id="categoria" name="categoria" 
+                            class="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                        <!-- Preenchido via JavaScript de acordo com Entrada ou Saída -->
+                    </select>
+                </div>
+
+                <!-- Forma de Pagamento -->
+                <div>
+                    <label for="forma_pagamento" class="block text-sm font-semibold text-slate-700 mb-1">
+                        Forma de Pagamento
+                    </label>
+                    <select id="forma_pagamento" name="forma_pagamento" 
+                            class="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                        {% for fp in formas_pagamento %}
+                            <option value="{{ fp }}">{{ fp }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Data do Lançamento -->
+            <div>
+                <label for="data" class="block text-sm font-semibold text-slate-700 mb-1">
+                    Data da Movimentação
+                </label>
+                <input type="date" id="data" name="data" 
+                       class="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+            </div>
+
+            <!-- Observações Adicionais (Opcional) -->
+            <div>
+                <label for="observacoes" class="block text-sm font-semibold text-slate-700 mb-1">
+                    Observações <span class="text-xs font-normal text-slate-400">(Opcional)</span>
+                </label>
+                <textarea id="observacoes" name="observacoes" rows="2"
+                          placeholder="Detalhes complementares sobre o fornecedor, recibo, etc..."
+                          class="block w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"></textarea>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-center justify-end gap-3">
+                <a href="{{ url_for('caixa_lista') }}" 
+                   class="w-full sm:w-auto px-5 py-2.5 text-center text-sm font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+                    Cancelar
+                </a>
+                <button type="submit" id="btn-submit"
+                        class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all">
+                    <i class="fa-solid fa-floppy-disk mr-1.5"></i>
+                    Salvar Lançamento
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const categoriasEntrada = {{ categorias_entrada|tojson }};
+    const categoriasSaida = {{ categorias_saida|tojson }};
+
+    function atualizarEstiloTipo() {
+        const isEntrada = document.getElementById('radio-entrada').checked;
+        const labelEntrada = document.getElementById('label-entrada');
+        const labelSaida = document.getElementById('label-saida');
+        const selectCat = document.getElementById('categoria');
+        const btnSubmit = document.getElementById('btn-submit');
+
+        if (isEntrada) {
+            labelEntrada.className = 'relative flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-50/70 shadow-sm cursor-pointer transition-all';
+            labelSaida.className = 'relative flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition-all';
+            btnSubmit.className = 'w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-semibold rounded-xl shadow-sm shadow-emerald-500/20 hover:shadow-md transition-all';
+
+            // Atualiza categorias
+            selectCat.innerHTML = '';
+            categoriasEntrada.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                selectCat.appendChild(opt);
+            });
+        } else {
+            labelSaida.className = 'relative flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-rose-500 bg-rose-50/70 shadow-sm cursor-pointer transition-all';
+            labelEntrada.className = 'relative flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition-all';
+            btnSubmit.className = 'w-full sm:w-auto px-6 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-sm font-semibold rounded-xl shadow-sm shadow-rose-500/20 hover:shadow-md transition-all';
+
+            // Atualiza categorias
+            selectCat.innerHTML = '';
+            categoriasSaida.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                selectCat.appendChild(opt);
+            });
+        }
+    }
+
+    // Inicializa a data de hoje no campo data
+    document.addEventListener('DOMContentLoaded', () => {
+        const dataInput = document.getElementById('data');
+        if (dataInput && !dataInput.value) {
+            const hoje = new Date().toISOString().split('T')[0];
+            dataInput.value = hoje;
+        }
+        atualizarEstiloTipo();
+    });
+</script>
+{% endblock %}

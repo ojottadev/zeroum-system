@@ -85,6 +85,10 @@
                        class="px-3.5 py-2 rounded-lg text-sm font-medium transition-colors {% if request.endpoint and 'vendas_' in request.endpoint %}bg-blue-50 text-blue-700 font-semibold{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
                         <i class="fa-solid fa-receipt mr-1.5 text-xs"></i> Vendas
                     </a>
+                    <a href="{{ url_for('caixa_lista') }}" 
+                       class="px-3.5 py-2 rounded-lg text-sm font-medium transition-colors {% if request.endpoint and 'caixa_' in request.endpoint %}bg-blue-50 text-blue-700 font-semibold{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                        <i class="fa-solid fa-cash-register mr-1.5 text-xs"></i> Caixa
+                    </a>
                 </nav>
 
                 <!-- Botão de Ação Rápida Desktop -->
@@ -140,6 +144,13 @@
                     <i class="fa-solid fa-receipt"></i>
                 </div>
                 Vendas & Peças
+            </a>
+            <a href="{{ url_for('caixa_lista') }}" 
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-medium {% if request.endpoint and 'caixa_' in request.endpoint %}bg-blue-50 text-blue-700 font-semibold{% else %}text-slate-700 hover:bg-slate-100{% endif %}">
+                <div class="w-8 h-8 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center">
+                    <i class="fa-solid fa-cash-register"></i>
+                </div>
+                Fluxo de Caixa
             </a>
             
             <div class="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
